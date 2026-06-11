@@ -4,6 +4,9 @@ GO
 CREATE OR ALTER PROCEDURE iud_employees
 AS
 BEGIN
+    DECLARE @updated_rows INT;
+    DECLARE @inserted_rows INT;
+    DECLARE @deleted_rows INT;
 
     -- Update existing records
     UPDATE s
@@ -16,6 +19,8 @@ BEGIN
     FROM staging.employees_clean s
     INNER JOIN landing.employees l
         ON s.employee_id = l.employee_id;
+
+        SET @updated_rows = @@ROWCOUNT;
 
     -- Insert new records
     INSERT INTO staging.employees_clean
@@ -39,12 +44,31 @@ BEGIN
         ON l.employee_id = s.employee_id
     WHERE s.employee_id IS NULL;
 
+    SET @inserted_rows = @@ROWCOUNT;
+
     -- Delete records removed from Landing
     DELETE s
     FROM staging.employees_clean s
     LEFT JOIN landing.employees l
         ON s.employee_id = l.employee_id
     WHERE l.employee_id IS NULL;
+
+    SET @deleted_rows = @@ROWCOUNT;
+
+    INSERT INTO config.audit_log
+(
+    procedure_name,
+    status,
+    message
+)
+VALUES
+(
+    'iud_employees',
+    'SUCCESS',
+    'Updated: ' + CAST(@updated_rows AS VARCHAR(10))
+    + ', Inserted: ' + CAST(@inserted_rows AS VARCHAR(10))
+    + ', Deleted: ' + CAST(@deleted_rows AS VARCHAR(10))
+);
 
 END;
 GO
@@ -58,6 +82,10 @@ GO
 
 SELECT *
 FROM staging.employees_clean;
+GO
+
+SELECT *
+FROM config.audit_log;
 GO
 
  INSERT INTO staging.employees_clean
