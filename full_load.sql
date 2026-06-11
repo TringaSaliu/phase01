@@ -7,6 +7,7 @@ BEGIN
     BEGIN TRANSACTION;
 
     BEGIN TRY
+        DECLARE @rows_inserted INT;
 
         TRUNCATE TABLE staging.employees_clean;
 
@@ -19,9 +20,17 @@ BEGIN
             salary,
             updated
         )
+        
         SELECT
-           *
+        employee_id,
+        first_name,
+        last_name,
+        department,
+        salary,
+        updated
         FROM landing.employees;
+
+        SET @rows_inserted = @@ROWCOUNT;
 
         INSERT INTO config.audit_log
         (
@@ -33,7 +42,7 @@ BEGIN
         (
             'full_load_employees',
             'SUCCESS',
-            'Full load completed. Rows inserted: ' + CAST(@@ROWCOUNT AS VARCHAR(10))
+            'Full load completed. Rows inserted: ' + CAST(@rows_inserted AS VARCHAR(10))
         );
 
         COMMIT TRANSACTION;
