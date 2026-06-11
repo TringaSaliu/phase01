@@ -8,6 +8,9 @@ BEGIN
     BEGIN TRY
 
         DECLARE @last_load_time DATETIME;
+        DECLARE @updated_rows INT;
+        DECLARE @inserted_rows INT;
+        DECLARE @deleted_rows INT;
 
         SELECT @last_load_time = last_load_time
         FROM config.load_config
@@ -25,6 +28,8 @@ BEGIN
         JOIN landing.employees l
             ON s.employee_id = l.employee_id
         WHERE l.updated > @last_load_time;
+        
+        SET @updated_rows = @@ROWCOUNT;
 
         -- Insert new records
         INSERT INTO staging.employees_clean
@@ -49,12 +54,16 @@ BEGIN
         WHERE s.employee_id IS NULL
           AND l.updated > @last_load_time;
 
+          SET @inserted_rows = @@ROWCOUNT;
+
           -- Delete records removed from Landing
         DELETE s
         FROM staging.employees_clean s
         LEFT JOIN landing.employees l
             ON s.employee_id = l.employee_id
         WHERE l.employee_id IS NULL;
+
+        SET @deleted_rows = @@ROWCOUNT;
 
         -- Update last load time
         UPDATE config.load_config
@@ -69,9 +78,11 @@ BEGIN
         )
         VALUES
         (
-            'incremental_load_employees',
-            'SUCCESS',
-            'Incremental load completed'
+    'incremental_load_employees',
+    'SUCCESS',
+    'Updated: ' + CAST(@updated_rows AS VARCHAR(10))
+        + ', Inserted: ' + CAST(@inserted_rows AS VARCHAR(10))
+        + ', Deleted: ' + CAST(@deleted_rows AS VARCHAR(10))
         );
 
     END TRY
