@@ -13,6 +13,8 @@ BEGIN
 
     BEGIN TRY
 
+        BEGIN TRANSACTION;
+
         DECLARE @sql NVARCHAR(MAX);
         DECLARE @last_load_time DATETIME;
         DECLARE @updated_rows INT;
@@ -37,7 +39,9 @@ BEGIN
         WHERE object_id = OBJECT_ID(
             QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable)
         )
-        AND name <> @KeyColumn;
+        AND name <> @KeyColumn
+        AND is_identity = 0
+        AND is_computed = 0;
 
         SELECT @insert_columns =
             STRING_AGG(
@@ -135,9 +139,14 @@ BEGIN
             + ', Deleted: ' + CAST(@deleted_rows AS VARCHAR(10))
         );
 
+        COMMIT TRANSACTION;
+
     END TRY
 
     BEGIN CATCH
+
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
 
         INSERT INTO config.audit_log
         (
@@ -151,6 +160,8 @@ BEGIN
             'FAIL',
             ERROR_MESSAGE()
         );
+
+        THROW;
 
     END CATCH
 

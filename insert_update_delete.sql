@@ -12,6 +12,8 @@ BEGIN
 
     BEGIN TRY
 
+        BEGIN TRANSACTION;
+
         DECLARE @sql NVARCHAR(MAX);
         DECLARE @updated_rows INT;
         DECLARE @inserted_rows INT;
@@ -117,9 +119,14 @@ BEGIN
             + ', Deleted: ' + CAST(@deleted_rows AS VARCHAR(10))
         );
 
+        COMMIT TRANSACTION;
+
     END TRY
 
     BEGIN CATCH
+
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
 
         INSERT INTO config.audit_log
         (
