@@ -1,108 +1,60 @@
 USE Employees;
 GO
 
-CREATE OR ALTER PROCEDURE iud
+CREATE OR ALTER PROCEDURE dbo.InsertUpdateDelete
     @SourceSchema VARCHAR(200),
-    @SourceTable VARCHAR(200),
     @TargetSchema VARCHAR(200),
-    @TargetTable VARCHAR(200),
-    @KeyColumn VARCHAR(200)
+    @TableName VARCHAR(200)
 AS
 BEGIN
 
+    DECLARE @sql NVARCHAR(MAX);
+
     BEGIN TRY
 
-        BEGIN TRANSACTION;
-
-        DECLARE @sql NVARCHAR(MAX);
-        DECLARE @updated_rows INT;
-        DECLARE @inserted_rows INT;
-        DECLARE @deleted_rows INT;
-        DECLARE @update_columns NVARCHAR(MAX);
-        DECLARE @insert_columns NVARCHAR(MAX);
-        DECLARE @insert_values NVARCHAR(MAX);
-
-        -- Get columns dynamically
-
-        SELECT @update_columns =
-            STRING_AGG(
-                's.' + QUOTENAME(name) + ' = l.' + QUOTENAME(name),
-                ', '
-            )
-        FROM sys.columns
-        WHERE object_id = OBJECT_ID(
-            QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable)
-        )
-        AND name <> @KeyColumn
-        AND is_identity = 0
-        AND is_computed = 0;
-
-        SELECT @insert_columns =
-            STRING_AGG(
-                QUOTENAME(name),
-                ', '
-            )
-        FROM sys.columns
-        WHERE object_id = OBJECT_ID(
-            QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable)
-        )
-        AND is_identity = 0
-        AND is_computed = 0;
-
-        SELECT @insert_values =
-            STRING_AGG(
-                'l.' + QUOTENAME(name),
-                ', '
-            )
-        FROM sys.columns
-        WHERE object_id = OBJECT_ID(
-            QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable)
-        )
-        AND is_identity = 0
-        AND is_computed = 0;
-
-        -- Update existing records
-
         SET @sql = '
-        UPDATE s
-        SET ' + @update_columns + '
-        FROM ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable) + ' s
-        INNER JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@SourceTable) + ' l
-            ON s.' + QUOTENAME(@KeyColumn) + ' = l.' + QUOTENAME(@KeyColumn);
+        UPDATE target
+        SET
+            target.first_name = source.first_name,
+            target.last_name = source.last_name,
+            target.department = source.department,
+            target.salary = source.salary,
+            target.updated = source.updated
+        FROM ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TableName) + ' target
+        INNER JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@TableName) + ' source
+            ON target.employee_id = source.employee_id;
+
+
+        INSERT INTO ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TableName) + '
+        (
+            employee_id,
+            first_name,
+            last_name,
+            department,
+            salary,
+            updated
+        )
+        SELECT
+            source.employee_id,
+            source.first_name,
+            source.last_name,
+            source.department,
+            source.salary,
+            source.updated
+        FROM ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@TableName) + ' source
+        LEFT JOIN ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TableName) + ' target
+            ON target.employee_id = source.employee_id
+        WHERE target.employee_id IS NULL;
+
+
+        DELETE target
+        FROM ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TableName) + ' target
+        LEFT JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@TableName) + ' source
+            ON target.employee_id = source.employee_id
+        WHERE source.employee_id IS NULL;
+        ';
 
         EXEC sp_executesql @sql;
-
-        SET @updated_rows = @@ROWCOUNT;
-
-        -- Insert new records
-
-        SET @sql = '
-        INSERT INTO ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable) + '
-        (' + @insert_columns + ')
-        SELECT ' + @insert_values + '
-        FROM ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@SourceTable) + ' l
-        LEFT JOIN ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable) + ' s
-            ON l.' + QUOTENAME(@KeyColumn) + ' = s.' + QUOTENAME(@KeyColumn) + '
-        WHERE s.' + QUOTENAME(@KeyColumn) + ' IS NULL';
-
-        EXEC sp_executesql @sql;
-
-        SET @inserted_rows = @@ROWCOUNT;
-
-        -- Delete records removed from source
-
-        SET @sql = '
-        DELETE s
-        FROM ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTable) + ' s
-        LEFT JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@SourceTable) + ' l
-            ON s.' + QUOTENAME(@KeyColumn) + ' = l.' + QUOTENAME(@KeyColumn) + '
-        WHERE l.' + QUOTENAME(@KeyColumn) + ' IS NULL';
-
-        EXEC sp_executesql @sql;
-
-        SET @deleted_rows = @@ROWCOUNT;
-
-        -- Audit
 
         INSERT INTO config.audit_log
         (
@@ -112,22 +64,15 @@ BEGIN
         )
         VALUES
         (
-            'iud',
+            'InsertUpdateDelete',
             'SUCCESS',
-            'Updated: ' + CAST(@updated_rows AS VARCHAR(10))
-            + ', Inserted: ' + CAST(@inserted_rows AS VARCHAR(10))
-            + ', Deleted: ' + CAST(@deleted_rows AS VARCHAR(10))
+            'Insert, update and delete completed successfully.'
         );
-
-        COMMIT TRANSACTION;
 
     END TRY
 
     BEGIN CATCH
 
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-
         INSERT INTO config.audit_log
         (
             procedure_name,
@@ -136,7 +81,7 @@ BEGIN
         )
         VALUES
         (
-            'iud',
+            'InsertUpdateDelete',
             'FAIL',
             ERROR_MESSAGE()
         );
@@ -146,4 +91,32 @@ BEGIN
     END CATCH
 
 END;
+GO
+-- Add new employees
+INSERT INTO landing.employees
+(
+    employee_id,
+    first_name,
+    last_name,
+    department,
+    salary,
+    updated
+)
+VALUES
+(12, 'Maria', 'Johnson', 'HR', 4700.00, GETDATE()),
+(13, 'Peter', 'Anderson', 'IT', 5200.00, GETDATE());
+GO
+
+-- Update an existing employee
+UPDATE landing.employees
+SET
+    first_name = 'David',
+    salary = 5800.00,
+    updated = GETDATE()
+WHERE employee_id = 5;
+GO
+
+-- Delete employees
+DELETE FROM landing.employees
+WHERE employee_id IN (12, 13);
 GO
