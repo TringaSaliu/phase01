@@ -22,12 +22,12 @@ BEGIN
         )
         
         SELECT
-        employee_id,
-        first_name,
-        last_name,
-        department,
-        salary,
-        updated
+            employee_id,
+            first_name,
+            last_name,
+            department,
+            salary,
+            updated
         FROM landing.employees;
 
         SET @rows_inserted = @@ROWCOUNT;

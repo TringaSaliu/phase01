@@ -84,7 +84,7 @@ SELECT COUNT(*) AS LandingRows
 FROM landing.employees;
 GO
 
- INSERT INTO staging.employees_clean
+INSERT INTO staging.employees_clean
 (
     employee_id,
     first_name,
@@ -96,7 +96,7 @@ GO
 VALUES
 (13, 'Maria', 'Johnson', 'IT', 5200, GETDATE());
 
- INSERT INTO landing.employees
+INSERT INTO landing.employees
 (
     employee_id,
     first_name,
