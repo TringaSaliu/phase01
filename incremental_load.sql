@@ -1,10 +1,39 @@
 USE Employees;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'config')
+BEGIN
+    EXEC('CREATE SCHEMA config');
+END;
+GO
+
+IF OBJECT_ID('config.load_config', 'U') IS NULL
+BEGIN
+    CREATE TABLE config.load_config
+    (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        last_load_time DATETIME
+    );
+END;
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM config.load_config
+    WHERE id = 1
+)
+BEGIN
+    INSERT INTO config.load_config (last_load_time)
+    VALUES ('1900-01-01');
+END;
+GO
+
 CREATE OR ALTER PROCEDURE incremental_load
     @SourceSchema VARCHAR(200),
     @TargetSchema VARCHAR(200),
-    @TableName VARCHAR(200)
+    @TargetTableName VARCHAR(200),
+    @SourceTableName VARCHAR(200)
 AS
 BEGIN
 
@@ -28,8 +57,8 @@ BEGIN
             target.department = source.department,
             target.salary = source.salary,
             target.updated = source.updated
-        FROM ' + QUOTENAME(@TargetSchema) + '.employees_clean AS target
-        INNER JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@TableName) + ' AS source
+        FROM ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTableName) + ' AS target
+        INNER JOIN ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@SourceTableName) + ' AS source
             ON target.employee_id = source.employee_id
         WHERE source.updated > @last_load_time;
         ';
@@ -43,7 +72,7 @@ BEGIN
         -- Insert new employees
 
         SET @sql = '
-        INSERT INTO ' + QUOTENAME(@TargetSchema) + '.employees_clean
+        INSERT INTO ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTableName) + '
         (
             employee_id,
             first_name,
@@ -59,8 +88,8 @@ BEGIN
             source.department,
             source.salary,
             source.updated
-        FROM ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@TableName) + ' AS source
-        LEFT JOIN ' + QUOTENAME(@TargetSchema) + '.employees_clean AS target
+        FROM ' + QUOTENAME(@SourceSchema) + '.' + QUOTENAME(@SourceTableName) + ' AS source
+        LEFT JOIN ' + QUOTENAME(@TargetSchema) + '.' + QUOTENAME(@TargetTableName) + ' AS target
             ON target.employee_id = source.employee_id
         WHERE target.employee_id IS NULL
         AND source.updated > @last_load_time;
@@ -154,7 +183,8 @@ GO
 EXEC incremental_load
     @SourceSchema = 'landing',
     @TargetSchema = 'staging',
-    @TableName = 'employees';
+    @SourceTableName = 'employees',
+    @TargetTableName = 'employees_clean';
 GO
 
 --check the target
@@ -171,3 +201,5 @@ SELECT *
 FROM config.audit_log
 ORDER BY id DESC;
 GO
+
+select * from config.load_config;

@@ -103,8 +103,8 @@ INSERT INTO landing.employees
     updated
 )
 VALUES
-(12, 'Maria', 'Johnson', 'HR', 4700.00, GETDATE()),
-(13, 'Peter', 'Anderson', 'IT', 5200.00, GETDATE());
+(20, 'Hana  ', 'Johnson', 'HR', 4700.00, GETDATE()),
+(30, 'Jon', 'Anderson', 'IT', 5200.00, GETDATE());
 GO
 
 -- Update an existing employee
@@ -120,3 +120,9 @@ GO
 DELETE FROM landing.employees
 WHERE employee_id IN (12, 13);
 GO
+
+SELECT *
+FROM landing.employees;
+
+SELECT *
+FROM staging.employees_clean;
