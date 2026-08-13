@@ -1,6 +1,7 @@
 USE Employees;
 GO
 
+
 CREATE OR ALTER PROCEDURE full_load_employees
 AS
 BEGIN
@@ -73,11 +74,11 @@ EXEC full_load_employees;
 GO
 
 SELECT *
-FROM staging.employees_clean;
+FROM landing.employees;
 GO
 
 SELECT *
-FROM landing.employees;
+FROM staging.employees_clean;
 GO
 
 SELECT *
