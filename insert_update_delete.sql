@@ -93,6 +93,7 @@ BEGIN
 
 END;
 GO
+
 -- Add new employees
 INSERT INTO landing.employees
 (
@@ -104,8 +105,8 @@ INSERT INTO landing.employees
     updated
 )
 VALUES
-(25, 'Hana  ', 'Johnson', 'HR', 4700.00, GETDATE()),
-(30, 'Jon', 'Anderson', 'IT', 5200.00, GETDATE());
+(101, 'Krenar', 'K', 'Pharmacist', 4700.00, GETDATE()),
+(105, 'Jona', 'Sela', 'IT', 5200.00, GETDATE());
 GO
 
 -- Update an existing employee
