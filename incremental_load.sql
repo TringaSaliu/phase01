@@ -162,8 +162,8 @@ INSERT INTO landing.employees
     updated
 )
 VALUES
-(14, 'Laura', 'Garcia', 'Finance', 6100.00, GETDATE()),
-(100, 'Tringa', 'Garcia', 'Finance', 6100.00, '2026-08-12 14:20:31.403');
+(50, 'Laura', 'Garcia', 'Finance', 6100.00, GETDATE()),
+(100, 'Tringa', 'Saliu', 'IT', 9000.00, '2026-08-12 14:20:31.403');
 GO
 
 --update existing employee
