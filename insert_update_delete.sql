@@ -105,8 +105,8 @@ INSERT INTO landing.employees
     updated
 )
 VALUES
-(101, 'Krenar', 'K', 'Pharmacist', 4700.00, GETDATE()),
-(105, 'Jona', 'Sela', 'IT', 5200.00, GETDATE());
+(101, 'Ina', 'Al', 'Pharmacist', 4700.00, GETDATE()),
+(105, 'Andi', 'Wilson', 'IT', 5200.00, GETDATE());
 GO
 
 -- Update an existing employee
@@ -120,7 +120,7 @@ GO
 
 -- Delete employees
 DELETE FROM landing.employees
-WHERE employee_id IN (12, 14, 20);
+WHERE employee_id IN (30, 35);
 GO
 
 SELECT *
